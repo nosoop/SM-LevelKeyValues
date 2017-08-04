@@ -9,13 +9,16 @@
 #pragma newdecls required
 #include <level_keyvalues>
 
+
+#define OUTPUT_NAME "OnCapTeam1"
+
 public void OnMapStart() {
-	int logicAuto = FindEntityByClassname(-1, "team_control_point");
+	int captureArea = FindEntityByClassname(-1, "trigger_capture_area");
 	
-	if (logicAuto != -1) {
-		LogMessage("%s", "Found a team_control_point with keys:");
+	if (captureArea != -1) {
+		LogMessage("---- %s", "Found a trigger_capture_area with keys:");
 		
-		KeyValues entityKeys = LevelEntity_GetKeysByEntity(logicAuto);
+		KeyValues entityKeys = LevelEntity_GetKeysByEntity(captureArea);
 		
 		if (entityKeys) {
 			char keyBuffer[128], valueBuffer[128];
@@ -28,5 +31,21 @@ public void OnMapStart() {
 			} while (entityKeys.GotoNextKey(false));
 			delete entityKeys;
 		}
+		
+		LogMessage("---- %s", "List of " ... OUTPUT_NAME ... " outputs:");
+		
+		LevelEntityOutputIterator captureOutputEvents =
+				LevelEntityOutputIterator.FromEntity(captureArea, OUTPUT_NAME);
+		
+		char targetName[32], inputName[64], variantValue[32];
+		float delay;
+		int nFireCount;
+		
+		while (captureOutputEvents.Next(targetName, sizeof(targetName), inputName,
+				sizeof(inputName), variantValue, sizeof(variantValue), delay, nFireCount)) {
+			LogMessage("target %s -> input %s (value %s, delay %.2f, refire %d)",
+					targetName, inputName, variantValue, delay, nFireCount);
+		}
+		delete captureOutputEvents;
 	}
 }
