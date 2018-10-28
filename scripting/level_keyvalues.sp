@@ -11,9 +11,11 @@
 #include <sdkhooks>
 #include <regex>
 
+#include <more_adt>
+
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.0.0"
+#define PLUGIN_VERSION "0.1.0"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -22,28 +24,42 @@ public Plugin myinfo = {
 	url = "https://github.com/nosoop/SM-LevelKeyValues/"
 }
 
-KeyValues g_MapEntities;
+ArrayList g_MapEntities;
+
+Handle g_OnEntityKeysParsed, g_OnAllEntitiesParsed;
 
 public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max) {
 	RegPluginLibrary("level-keyvalues");
 	
 	CreateNative("LevelEntity_GetKeysByHammerID", Native_GetKeysByHammerID);
+	CreateNative("LevelEntity_InsertEntityKeys", Native_InsertEntity);
 	
 	return APLRes_Success;
 }
 
+public void OnPluginStart() {
+	g_OnEntityKeysParsed = CreateGlobalForward("LevelEntity_OnEntityKeysParsed", ET_Hook,
+			Param_Cell);
+	g_OnAllEntitiesParsed = CreateGlobalForward("LevelEntity_OnAllEntitiesParsed", ET_Ignore);
+}
+
 public Action OnLevelInit(const char[] mapName, char mapEntities[2097152]) {
 	if (g_MapEntities) {
+		while (g_MapEntities.Length) {
+			StringMultiMap handle = g_MapEntities.Get(0);
+			delete handle;
+			g_MapEntities.Erase(0);
+		}
 		delete g_MapEntities;
 	}
 	
 	g_MapEntities = ParseEntityList(mapEntities);
 	
-	/**
-	 * create a forward to allow manipulation of the KV?  create a cloned copy?
-	 * could open up possibilities for dynamically filtering / adding new entities in ways that
-	 * Stripper:Source doesn't support natively
-	 */ 
+	Call_StartForward(g_OnAllEntitiesParsed);
+	Call_Finish();
+	
+	mapEntities = "";
+	WriteEntityList(g_MapEntities, mapEntities, sizeof(mapEntities));
 	
 	return Plugin_Continue;
 }
@@ -51,30 +67,29 @@ public Action OnLevelInit(const char[] mapName, char mapEntities[2097152]) {
 public int Native_GetKeysByHammerID(Handle plugin, int argc) {
 	// native KeyValues LevelEntity_GetKeysByHammerID(int iHammerID);
 	int iHammerID = GetNativeCell(1);
-	
-	char hammerID[64];
-	IntToString(iHammerID, hammerID, sizeof(hammerID));
-	
-	if (g_MapEntities && g_MapEntities.JumpToKey(hammerID, false)) {
-		// create and transfer ownership of KeyValues
-		KeyValues kv = new KeyValues(hammerID);
-		KeyValues retval = view_as<KeyValues>(CloneHandle(kv, plugin));
-		
-		kv.Import(g_MapEntities);
-		g_MapEntities.GoBack();
-		
-		delete kv;
-		
-		return view_as<int>(retval);
+	for (int i = 0; i < g_MapEntities.Length; i++) {
+		StringMultiMap entityKeys = g_MapEntities.Get(i);
+		char hid[16];
+		if (entityKeys.GetString("hammerid", hid, sizeof(hid))) {
+			if (StringToInt(hid) == iHammerID) {
+				return view_as<int>(CloneHandle(entityKeys, plugin));
+			}
+		}
 	}
+	
 	return 0;
 }
 
+public int Native_InsertEntity(Handle plugin, int argc) {
+	StringMultiMap entity = GetNativeCell(1);
+	g_MapEntities.Push(entity);
+	return;
+}
+
 /**
- * Parses the level entity string into a KeyValues struct.
- * The KeyValues struct organizes keys using the `hammerid` as the section names.
+ * Parses the level entity string into an ArrayList of StringMultiMap handles.
  */
-static KeyValues ParseEntityList(const char mapEntities[2097152]) {
+static ArrayList ParseEntityList(const char mapEntities[2097152]) {
 	static Regex s_KeyValueLine;
 	
 	if (!s_KeyValueLine) {
@@ -82,32 +97,32 @@ static KeyValues ParseEntityList(const char mapEntities[2097152]) {
 		s_KeyValueLine = new Regex("\"([^\"]+)\"\\s+\"([^\"]+)\"");
 	}
 	
-	KeyValues mapKeyValues = new KeyValues("map_entities");
+	ArrayList mapEntityList = new ArrayList();
 	
 	int nKeys;
 	
 	char key[256], value[256];
+	
+	StringMultiMap currentEntityMap;
 	
 	int i, n;
 	char lineBuffer[4096];
 	while ((n = SplitString(mapEntities[i], "\n", lineBuffer, sizeof(lineBuffer))) != -1) {
 		switch(lineBuffer[0]) {
 			case '{': {
-				char sectionValue[128];
-				Format(sectionValue, sizeof(sectionValue), "__parsed_unknown_%d", nKeys);
-				
-				mapKeyValues.JumpToKey(sectionValue, true);
+				currentEntityMap = new StringMultiMap();
 				nKeys++;
 			}
 			case '}': {
-				mapKeyValues.GoBack();
+				if (ForwardOnEntityKeysParsed(currentEntityMap) != Plugin_Stop) {
+					mapEntityList.Push(currentEntityMap);
+				} else {
+					delete currentEntityMap;
+				}
 				
 				// next open bracket starts on same line
 				if (lineBuffer[1] == '{') {
-					char sectionValue[128];
-					Format(sectionValue, sizeof(sectionValue), "__parsed_unknown_%d", nKeys);
-					
-					mapKeyValues.JumpToKey(sectionValue, true);
+					currentEntityMap = new StringMultiMap();
 					nKeys++;
 				}
 			}
@@ -116,39 +131,62 @@ static KeyValues ParseEntityList(const char mapEntities[2097152]) {
 					s_KeyValueLine.GetSubString(1, key, sizeof(key));
 					s_KeyValueLine.GetSubString(2, value, sizeof(value));
 					
-					KeyValues_AddString(mapKeyValues, key, value);
-					
-					// change section name to hammerid for quick lookup (`m_iHammerID` dataprop)
-					if (StrEqual(key, "hammerid")) {
-						mapKeyValues.SetSectionName(value);
-					}
+					currentEntityMap.AddString(key, value);
 				}
 			}
 		}
 		i += n;
 	}
-	mapKeyValues.GoBack();
-	mapKeyValues.SetNum("num_entities", nKeys);
 	
-	return mapKeyValues;
+	if (currentEntityMap) {
+		if (ForwardOnEntityKeysParsed(currentEntityMap) != Plugin_Stop) {
+			mapEntityList.Push(currentEntityMap);
+		} else {
+			delete currentEntityMap;
+		}
+	}
+	
+	return mapEntityList;
+}
+
+Action ForwardOnEntityKeysParsed(StringMultiMap entity) {
+	Action result;
+	Call_StartForward(g_OnEntityKeysParsed);
+	Call_PushCell(entity);
+	Call_Finish(result);
+	
+	return result;
 }
 
 /**
- * Adds a new key/value pair to the KeyValues structure in a way that allows for duplicate key
- * names.
+ * Writes the entity list back out in level string format.
  */
-static void KeyValues_AddString(KeyValues kv, const char[] key, const char[] value) {
-	static int s_nTempKey;
-	
-	char tempKey[64];
-	Format(tempKey, sizeof(tempKey), "__levelkv_temp_buffer_%d", s_nTempKey++);
-	
-	kv.SetString(tempKey, value);
-	
-	kv.JumpToKey(tempKey);
-	kv.GotoFirstSubKey(false);
-	kv.SetSectionName(key);
-	kv.GotoNextKey();
-	
-	kv.GoBack();
+void WriteEntityList(ArrayList entityList, char[] buffer, int maxlen) {
+	for (int i = 0; i < entityList.Length; i++) {
+		StrCat(buffer, maxlen, "{\n");
+		
+		StringMultiMapIterator keyiter = view_as<StringMultiMap>(entityList.Get(i)).GetIterator();
+		while (keyiter.Next()) {
+			char key[64], value[256];
+			keyiter.GetKey(key, sizeof(key));
+			keyiter.GetString(value, sizeof(value));
+			
+			char lineBuffer[512];
+			Format(lineBuffer, sizeof(lineBuffer), "\"%s\" \"%s\"\n", key, value);
+			StrCat(buffer, maxlen, lineBuffer);
+		}
+		delete keyiter;
+		
+		StrCat(buffer, maxlen, "}\n");
+	}
+}
+
+/**
+ * Converts a string to lower case.
+ */
+stock void StrToLower(char[] buffer) {
+	int c;
+	do {
+		buffer[c] = CharToLower(buffer[c]);
+	} while (buffer[++c]);
 }

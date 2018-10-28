@@ -3,73 +3,51 @@
 #endif
 #define _level_keyvalues_included
 
+#include <more_adt>
+
+/**
+ * Wrapper for StringMultiMap that uses an intermediary parsing step to ensure all values are
+ * strings.
+ */
+methodmap LevelEntityKeyValues < StringMultiMap {
+	public LevelEntityKeyValues() {
+		return view_as<LevelEntityKeyValues>(new StringMultiMap());
+	}
+	
+	// TODO implementation -- for now make sure that you only use the string-related
+	// getters / setters in StringMultiMap.
+}
+
+/**
+ * Called when a block of entity keys is finished parsing.
+ * Changes to the StringMultiMap will be reflected in the level.
+ * 
+ * @return Plugin_Changed to copy back changed values, Plugin_Stop to remove the entity.
+ */
+forward Action LevelEntity_OnEntityKeysParsed(LevelEntityKeyValues entity);
+
+/**
+ * Called when the entity string in `OnLevelInit` has been fully parsed out.
+ * Plugins may call LevelEntity_InsertEntityKeys here to insert new entities into the entity
+ * string.
+ */
+forward void LevelEntity_OnAllEntitiesParsed();
+
+/**
+ * Adds a new entity entry.  All values should be strings.
+ */
+native void LevelEntity_InsertEntityKeys(LevelEntityKeyValues entity);
+
 /**
  * Returns a copy of the KeyValues associated with the entity of a specified Hammer ID.
- * The KeyValues handle returned by the native is read-only; any changes made do not propagate
- * up to the shared plugin.
+ * Any changes to the returned StringMultiMap handle will not be reflected in the level.
  */
-native KeyValues LevelEntity_GetKeysByHammerID(int iHammerID);
-
-/** 
- * A KeyValues-backed handle that returns and iterates over keys that match the given output
- * name, parsing the output value into its components while being iterated.
- */
-methodmap LevelEntityOutputIterator < KeyValues {
-	/**
-	 * Creates an output iterator for a given Hammer ID.
-	 */
-	public LevelEntityOutputIterator(int hammerID, const char[] output) {
-		KeyValues outputs = LevelEntity_GetKeysByHammerID(hammerID);
-		if (outputs) {
-			char keyBuffer[128], valueBuffer[128];
-			outputs.GotoFirstSubKey(false);
-			bool bNext;
-			do {
-				outputs.GetSectionName(keyBuffer, sizeof(keyBuffer));
-				outputs.GetString(NULL_STRING, valueBuffer, sizeof(valueBuffer));
-				
-				if (!StrEqual(keyBuffer, output)) {
-					bNext = outputs.DeleteThis() != -1;
-				} else {
-					bNext = outputs.GotoNextKey(false);
-				}
-			} while (bNext);
-			outputs.GotoFirstSubKey(false);
-		}
-		return view_as<LevelEntityOutputIterator>(outputs);
-	}
-	
-	/**
-	 * Returns an output iterator for a given entity (reference), looking it up by its Hammer
-	 * ID.
-	 */
-	public static LevelEntityOutputIterator FromEntity(int entref, const char[] output) {
-		int entity = EntRefToEntIndex(entref);
-		return new LevelEntityOutputIterator(GetEntProp(entity, Prop_Data, "m_iHammerID"),
-				output);
-	}
-	
-	/**
-	 * Parses the current output string, storing the values by reference and advancing to the
-	 * next key.
-	 */
-	public bool Next(char[] targetName, int targetNameLength,
-			char[] inputName, int inputNameLength, char[] variantValue, int variantValueLength,
-			float &delay, int &nFireCount) {
-		char outputString[512];
-		this.GetString(NULL_STRING, outputString, sizeof(outputString));
-		
-		// this.GoBack() is a disgusting hack just to make sure it returns true on the last item
-		return ParseEntityOutputString(outputString, targetName, targetNameLength, inputName,
-				inputNameLength, variantValue, variantValueLength, delay, nFireCount)
-				&& (this.GotoNextKey(false) || this.GoBack());
-	}
-}
+native LevelEntityKeyValues LevelEntity_GetKeysByHammerID(int iHammerID);
 
 /**
  * Returns a copy of the KeyValues associated with a given entity.
  */
-stock KeyValues LevelEntity_GetKeysByEntity(int entref) {
+stock LevelEntityKeyValues LevelEntity_GetKeysByEntity(int entref) {
 	int entity = EntRefToEntIndex(entref);
 	return LevelEntity_GetKeysByHammerID(GetEntProp(entity, Prop_Data, "m_iHammerID"));
 }
