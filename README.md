@@ -1,11 +1,32 @@
 # Level KeyValues
-A helper plugin that transforms the level's entity string into a `KeyValues` handle.
+A helper plugin that transforms the level's entity string into a `StringMultiMap` handle.
 
-## Information
+## Dependencies
 
-The plugin's `KeyValues` handle only does reads.  Any modifications to the `KeyValues` structure are not applied to the map entities.
+* The [More ADTs extension][madt] provides the `StringMultiMap` handle type, providing proper
+support for one-to-many mappings without an additional handle for each unique key.
 
-This was mostly meant as a proof-of-concept (I was interested in reading output rules for a better round win command).
-Never really got around to designing a decent API for property manipulation as [Stripper:Source] does.
+[madt]: https://github.com/nosoop/SMExt-MoreADTs/releases
+
+## Usage
+
+Think of it as a more flexible, barebones version of [Stripper:Source].
+
+You don't get the nice configuration files for fixed filterings, but you do get the following:
+
+```
+forward Action LevelEntity_OnEntityKeysParsed(LevelEntityKeyValues entity);
+```
+
+Plugins listening to the forward can add / remove keys, or return `Plugin_Stop` to filter the
+entity out entirely.
+
+```
+forward void LevelEntity_OnAllEntitiesParsed();
+native void LevelEntity_InsertEntityKeys(LevelEntityKeyValues entity);
+```
+
+Plugins can instantiate their own instances of `LevelEntityKeyValues` and call
+`LevelEntity_InsertEntityKeys` during this forward to add them to the level.
 
 [Stripper:Source]: http://www.bailopan.net/stripper/
