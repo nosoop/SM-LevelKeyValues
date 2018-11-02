@@ -15,7 +15,7 @@
 
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.1.0"
+#define PLUGIN_VERSION "0.1.1"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -82,7 +82,7 @@ public int Native_GetKeysByHammerID(Handle plugin, int argc) {
 
 public int Native_InsertEntity(Handle plugin, int argc) {
 	StringMultiMap entity = GetNativeCell(1);
-	g_MapEntities.Push(entity);
+	g_MapEntities.Push(CloneHandle(entity));
 	return;
 }
 
