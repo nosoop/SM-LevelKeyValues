@@ -17,7 +17,7 @@
 
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.2.0"
+#define PLUGIN_VERSION "0.2.1"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -81,7 +81,7 @@ public Action OnLevelInit(const char[] mapName, char mapEntities[2097152]) {
 	mapEntities = "";
 	WriteEntityList(g_MapEntities, mapEntities, sizeof(mapEntities));
 	
-	return Plugin_Continue;
+	return Plugin_Changed;
 }
 
 public int Native_GetKeysByHammerID(Handle plugin, int argc) {
