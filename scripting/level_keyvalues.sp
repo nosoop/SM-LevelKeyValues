@@ -15,7 +15,7 @@
 
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.1.1"
+#define PLUGIN_VERSION "0.1.2"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -99,8 +99,6 @@ static ArrayList ParseEntityList(const char mapEntities[2097152]) {
 	
 	ArrayList mapEntityList = new ArrayList();
 	
-	int nKeys;
-	
 	char key[256], value[256];
 	
 	StringMultiMap currentEntityMap;
@@ -111,11 +109,11 @@ static ArrayList ParseEntityList(const char mapEntities[2097152]) {
 		switch(lineBuffer[0]) {
 			case '{': {
 				currentEntityMap = new StringMultiMap();
-				nKeys++;
 			}
 			case '}': {
 				if (ForwardOnEntityKeysParsed(currentEntityMap) != Plugin_Stop) {
 					mapEntityList.Push(currentEntityMap);
+					currentEntityMap = null; // don't hold a reference that might be pushed later
 				} else {
 					delete currentEntityMap;
 				}
@@ -123,7 +121,6 @@ static ArrayList ParseEntityList(const char mapEntities[2097152]) {
 				// next open bracket starts on same line
 				if (lineBuffer[1] == '{') {
 					currentEntityMap = new StringMultiMap();
-					nKeys++;
 				}
 			}
 			default: {
