@@ -5,17 +5,50 @@
 
 #include <more_adt>
 
+static stock KeyValues KeyValueBuffer() {
+	static KeyValues s_KVBuffer;
+	if (!s_KVBuffer) {
+		s_KVBuffer = new KeyValues("");
+	}
+	return s_KVBuffer;
+}
+
 /**
- * Wrapper for StringMultiMap that uses an intermediary parsing step to ensure all values are
- * strings.
+ * Wrapper for StringMultiMap that performs implicit string conversion.
+ */
+methodmap LevelEntityKeyValuesIterator < StringMultiMapIterator {
+	public native int GetNum(int defaultValue = 0);
+	public native void SetNum(int value);
+	
+	public native float GetFloat(float flDefaultValue = 0.0);
+	public native void SetFloat(float flValue);
+	
+	public native void GetVector(float vec[3], const float defvalue[3])
+	public native void SetVector(const float vec[3])
+}
+
+/**
+ * Wrapper for StringMultiMap that performs implicit string conversion.
  */
 methodmap LevelEntityKeyValues < StringMultiMap {
 	public LevelEntityKeyValues() {
 		return view_as<LevelEntityKeyValues>(new StringMultiMap());
 	}
 	
-	// TODO implementation -- for now make sure that you only use the string-related
-	// getters / setters in StringMultiMap.
+	public native int GetNum(const char[] key, int defaultValue = 0);
+	public native void AddNum(const char[] key, int value);
+	
+	public native float GetFloat(const char[] key, float flDefaultValue = 0);
+	public native void AddFloat(const char[] key, float value);
+	
+	public native void GetVector(const char[] key, float vec[3],
+			const float defaultValue[3] = { 0.0, ... });
+	public native void AddVector(const char[] key, const float vec[3]);
+	
+	public LevelEntityKeyValuesIterator GetKeyIterator(const char[] key) {
+		return view_as<LevelEntityKeyValuesIterator>(
+				view_as<StringMultiMap>(this).GetKeyIterator(key));
+	}
 }
 
 /**

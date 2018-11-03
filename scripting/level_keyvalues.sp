@@ -13,9 +13,11 @@
 
 #include <more_adt>
 
+#include "level_keyvalues/map_string_natives.sp"
+
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.1.2"
+#define PLUGIN_VERSION "0.2.0"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -33,6 +35,24 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max) 
 	
 	CreateNative("LevelEntity_GetKeysByHammerID", Native_GetKeysByHammerID);
 	CreateNative("LevelEntity_InsertEntityKeys", Native_InsertEntity);
+	
+	CreateNative("LevelEntityKeyValues.GetNum", Native_MapGetNum);
+	CreateNative("LevelEntityKeyValues.AddNum", Native_MapAddNum);
+	
+	CreateNative("LevelEntityKeyValues.GetFloat", Native_MapGetFloat);
+	CreateNative("LevelEntityKeyValues.AddFloat", Native_MapAddFloat);
+	
+	CreateNative("LevelEntityKeyValues.GetVector", Native_MapGetVector);
+	CreateNative("LevelEntityKeyValues.AddVector", Native_MapAddVector);
+	
+	CreateNative("LevelEntityKeyValuesIterator.GetNum", Native_MapIterGetNum);
+	CreateNative("LevelEntityKeyValuesIterator.SetNum", Native_MapIterSetNum);
+	
+	CreateNative("LevelEntityKeyValuesIterator.GetFloat", Native_MapIterGetFloat);
+	CreateNative("LevelEntityKeyValuesIterator.SetFloat", Native_MapIterSetFloat);
+	
+	CreateNative("LevelEntityKeyValuesIterator.GetVector", Native_MapIterGetVector);
+	CreateNative("LevelEntityKeyValuesIterator.SetVector", Native_MapIterSetVector);
 	
 	return APLRes_Success;
 }
