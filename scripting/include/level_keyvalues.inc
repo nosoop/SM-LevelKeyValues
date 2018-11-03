@@ -5,14 +5,6 @@
 
 #include <more_adt>
 
-static stock KeyValues KeyValueBuffer() {
-	static KeyValues s_KVBuffer;
-	if (!s_KVBuffer) {
-		s_KVBuffer = new KeyValues("");
-	}
-	return s_KVBuffer;
-}
-
 /**
  * Wrapper for StringMultiMap that performs implicit string conversion.
  */
@@ -38,7 +30,7 @@ methodmap LevelEntityKeyValues < StringMultiMap {
 	public native int GetNum(const char[] key, int defaultValue = 0);
 	public native void AddNum(const char[] key, int value);
 	
-	public native float GetFloat(const char[] key, float flDefaultValue = 0);
+	public native float GetFloat(const char[] key, float flDefaultValue = 0.0);
 	public native void AddFloat(const char[] key, float value);
 	
 	public native void GetVector(const char[] key, float vec[3],
