@@ -6,7 +6,8 @@
 #include <more_adt>
 
 /**
- * Wrapper for StringMultiMap that performs implicit string conversion.
+ * Wrapper for StringMultiMapIterator that performs implicit string conversion with
+ * KeyValues-style getters and setters.
  */
 methodmap LevelEntityKeyValuesIterator < StringMultiMapIterator {
 	public native int GetNum(int defaultValue = 0);
@@ -20,7 +21,8 @@ methodmap LevelEntityKeyValuesIterator < StringMultiMapIterator {
 }
 
 /**
- * Wrapper for StringMultiMap that performs implicit string conversion.
+ * Wrapper for StringMultiMap that performs implicit string conversion with KeyValues-style
+ * getters and setters.
  */
 methodmap LevelEntityKeyValues < StringMultiMap {
 	public LevelEntityKeyValues() {
