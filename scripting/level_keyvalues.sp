@@ -17,7 +17,7 @@
 
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.2.1"
+#define PLUGIN_VERSION "0.3.0"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -27,6 +27,7 @@ public Plugin myinfo = {
 }
 
 ArrayList g_MapEntities;
+bool g_bMutableList;
 
 Handle g_OnEntityKeysParsed, g_OnAllEntitiesParsed;
 
@@ -54,6 +55,11 @@ public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max) 
 	CreateNative("LevelEntityKeyValuesIterator.GetVector", Native_MapIterGetVector);
 	CreateNative("LevelEntityKeyValuesIterator.SetVector", Native_MapIterSetVector);
 	
+	CreateNative("LevelEntityList.Get", Native_LevelListGet);
+	CreateNative("LevelEntityList.Push", Native_InsertEntity);
+	CreateNative("LevelEntityList.Erase", Native_LevelListErase);
+	CreateNative("LevelEntityList.Length", Native_LevelListGetLength);
+	
 	return APLRes_Success;
 }
 
@@ -75,8 +81,10 @@ public Action OnLevelInit(const char[] mapName, char mapEntities[2097152]) {
 	
 	g_MapEntities = ParseEntityList(mapEntities);
 	
+	g_bMutableList = true;
 	Call_StartForward(g_OnAllEntitiesParsed);
 	Call_Finish();
+	g_bMutableList = false;
 	
 	mapEntities = "";
 	WriteEntityList(g_MapEntities, mapEntities, sizeof(mapEntities));
@@ -100,10 +108,43 @@ public int Native_GetKeysByHammerID(Handle plugin, int argc) {
 	return 0;
 }
 
+public int Native_LevelListGet(Handle plugin, int argc) {
+	return view_as<int>(CloneHandle(g_MapEntities.Get(GetNativeCell(1))));
+}
+
+public int Native_LevelListErase(Handle plugin, int argc) {
+	if (!g_bMutableList) {
+		ThrowNativeError(1, "Can't remove entities from list during non-mutable state.");
+	}
+	g_MapEntities.Erase(GetNativeCell(1));
+	return 0;
+}
+
 public int Native_InsertEntity(Handle plugin, int argc) {
+	if (!g_bMutableList) {
+		ThrowNativeError(1, "Can't push new entity into list during non-mutable state.");
+	}
 	StringMultiMap entity = GetNativeCell(1);
-	g_MapEntities.Push(CloneHandle(entity));
+	g_MapEntities.Push(CloneStringMultiMap(entity));
 	return;
+}
+
+public int Native_LevelListGetLength(Handle plugin, int argc) {
+	return g_MapEntities.Length;
+}
+
+StringMultiMap CloneStringMultiMap(StringMultiMap source) {
+	char key[256], value[256];
+	StringMultiMapIterator iter = source.GetIterator();
+	
+	StringMultiMap output = new StringMultiMap();
+	while (iter.Next()) {
+		iter.GetKey(key, sizeof(key));
+		if (iter.GetString(value, sizeof(value))) {
+			output.AddString(key, value);
+		}
+	}
+	return output;
 }
 
 /**

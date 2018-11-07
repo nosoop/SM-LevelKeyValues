@@ -46,6 +46,33 @@ methodmap LevelEntityKeyValues < StringMultiMap {
 }
 
 /**
+ * ArrayList-like accessors to a global, static collection of LevelEntityKeyValues handles.
+ */
+methodmap LevelEntityList {
+	/**
+	 * Returns a LevelEntityKeyValues handle from the list by index.  The handle must be freed.
+	 */
+	public static native LevelEntityKeyValues Get(int index);
+	
+	/**
+	 * Removes a LevelEntityKeyValues handle from the list by index.
+	 */
+	public static native void Erase(int index);
+	
+	/**
+	 * Adds a new entity entry.  All values should be strings.
+	 * The key / values are internally copied to a new handle, so any changes to the specified
+	 * LevelEntityKeyValues handle will not be propagated to the internal copy.
+	 */
+	public static native void Push(LevelEntityKeyValues entity);
+	
+	/**
+	 * Returns the number of LevelEntityKeyValues handles in the list.
+	 */
+	public static native int Length();
+}
+
+/**
  * Called when a block of entity keys is finished parsing.
  * Changes to the StringMultiMap will be reflected in the level.
  * 
@@ -55,14 +82,12 @@ forward Action LevelEntity_OnEntityKeysParsed(LevelEntityKeyValues entity);
 
 /**
  * Called when the entity string in `OnLevelInit` has been fully parsed out.
- * Plugins may call LevelEntity_InsertEntityKeys here to insert new entities into the entity
- * string.
+ * Any modifications to the LevelEntityList or its member LevelEntityKeyValues will be written
+ * out to the entity string.
  */
 forward void LevelEntity_OnAllEntitiesParsed();
 
-/**
- * Adds a new entity entry.  All values should be strings.
- */
+#pragma deprecated Use LevelEntityList.Push instead
 native void LevelEntity_InsertEntityKeys(LevelEntityKeyValues entity);
 
 /**
