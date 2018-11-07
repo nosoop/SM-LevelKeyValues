@@ -64,7 +64,7 @@ methodmap LevelEntityList {
 	 * The key / values are internally copied to a new handle, so any changes to the specified
 	 * LevelEntityKeyValues handle will not be propagated to the internal copy.
 	 */
-	public static native void Push(LevelEntityKeyValues entity);
+	public static native int Push(LevelEntityKeyValues entity);
 	
 	/**
 	 * Returns the number of LevelEntityKeyValues handles in the list.
@@ -82,8 +82,9 @@ forward Action LevelEntity_OnEntityKeysParsed(LevelEntityKeyValues entity);
 
 /**
  * Called when the entity string in `OnLevelInit` has been fully parsed out.
- * Any modifications to the LevelEntityList or its member LevelEntityKeyValues will be written
- * out to the entity string.
+ * 
+ * During this forward, modifications to the LevelEntityList or its member LevelEntityKeyValues
+ * are guaranteed to be written out to the entity string.
  */
 forward void LevelEntity_OnAllEntitiesParsed();
 

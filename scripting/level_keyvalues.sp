@@ -125,8 +125,7 @@ public int Native_InsertEntity(Handle plugin, int argc) {
 		ThrowNativeError(1, "Can't push new entity into list during non-mutable state.");
 	}
 	StringMultiMap entity = GetNativeCell(1);
-	g_MapEntities.Push(CloneStringMultiMap(entity));
-	return;
+	return g_MapEntities.Push(CloneStringMultiMap(entity));
 }
 
 public int Native_LevelListGetLength(Handle plugin, int argc) {
