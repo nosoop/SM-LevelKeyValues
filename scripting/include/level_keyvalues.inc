@@ -10,6 +10,24 @@
  * KeyValues-style getters and setters.
  */
 methodmap LevelEntityKeyValuesIterator < StringMultiMapIterator {
+	public bool GetValue(any &value) {
+		ThrowError("Preventing non-string operation LevelEntityKeyValuesIterator.GetValue.  "
+				... "Use GetNum or GetFloat instead.");
+	}
+	public void SetValue(any value) {
+		ThrowError("Preventing non-string operation LevelEntityKeyValuesIterator.SetValue.  "
+				... "Use SetNum or SetFloat instead.");
+	}
+	
+	public bool GetArray(any[] array, int max_size, int& size = 0) {
+		ThrowError("Preventing non-string operation LevelEntityKeyValuesIterator.GetArray.  "
+				... "Use GetVector instead.");
+	}
+	public void SetArray(const any[] array, int num_items) {
+		ThrowError("Preventing non-string operation LevelEntityKeyValuesIterator.SetArray.  "
+				... "Use SetVector instead.");
+	}
+	
 	public native int GetNum(int defaultValue = 0);
 	public native void SetNum(int value);
 	
@@ -29,6 +47,24 @@ methodmap LevelEntityKeyValues < StringMultiMap {
 		return view_as<LevelEntityKeyValues>(new StringMultiMap());
 	}
 	
+	public bool GetValue(const char[] key, any &value) {
+		ThrowError("Preventing non-string operation LevelEntityKeyValues.GetValue.  "
+				... "Use GetNum or GetFloat instead.");
+	}
+	public void AddValue(const char[] key, any value) {
+		ThrowError("Preventing non-string operation LevelEntityKeyValues.AddValue.  "
+				... "Use AddNum or AddFloat instead.");
+	}
+	
+	public bool GetArray(const char[] key, any[] array, int max_size, int& size = 0) {
+		ThrowError("Preventing non-string operation LevelEntityKeyValues.GetArray.  "
+				... "Use GetVector instead.");
+	}
+	public void AddArray(const char[] key, const any[] array, int num_items) {
+		ThrowError("Preventing non-string operation LevelEntityKeyValues.AddArray.  "
+				... "Use AddVector instead.");
+	}
+	
 	public native int GetNum(const char[] key, int defaultValue = 0);
 	public native void AddNum(const char[] key, int value);
 	
@@ -38,6 +74,11 @@ methodmap LevelEntityKeyValues < StringMultiMap {
 	public native void GetVector(const char[] key, float vec[3],
 			const float defaultValue[3] = { 0.0, ... });
 	public native void AddVector(const char[] key, const float vec[3]);
+	
+	public LevelEntityKeyValuesIterator GetIterator() {
+		return view_as<LevelEntityKeyValuesIterator>(
+				view_as<StringMultiMap>(this).GetIterator());
+	}
 	
 	public LevelEntityKeyValuesIterator GetKeyIterator(const char[] key) {
 		return view_as<LevelEntityKeyValuesIterator>(
