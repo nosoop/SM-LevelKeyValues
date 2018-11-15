@@ -1,5 +1,7 @@
 /**
- * Sourcemod 1.7 Plugin Template
+ * [TF2] Level KeyValues Sample Plugin
+ * 
+ * Sample plugin for Level KeyValues.
  */
 #pragma semicolon 1
 #include <sourcemod>
@@ -9,7 +11,6 @@
 #pragma newdecls required
 #include <level_keyvalues>
 
-
 #define OUTPUT_NAME "OnCapTeam1"
 
 public void OnMapStart() {
@@ -18,34 +19,38 @@ public void OnMapStart() {
 	if (captureArea != -1) {
 		LogMessage("---- %s", "Found a trigger_capture_area with keys:");
 		
-		KeyValues entityKeys = LevelEntity_GetKeysByEntity(captureArea);
+		LevelEntityKeyValues entityKeys = LevelEntity_GetKeysByEntity(captureArea);
 		
 		if (entityKeys) {
 			char keyBuffer[128], valueBuffer[128];
-			entityKeys.GotoFirstSubKey(false);
-			do {
-				entityKeys.GetSectionName(keyBuffer, sizeof(keyBuffer));
-				entityKeys.GetString(NULL_STRING, valueBuffer, sizeof(valueBuffer));
+			LevelEntityKeyValuesIterator iter = entityKeys.GetIterator();
+			while (iter.Next()) {
+				iter.GetKey(keyBuffer, sizeof(keyBuffer));
+				iter.GetString(valueBuffer, sizeof(valueBuffer));
 				
 				LogMessage("%s -> %s", keyBuffer, valueBuffer);
-			} while (entityKeys.GotoNextKey(false));
-			delete entityKeys;
+			}
+			delete iter;
 		}
 		
 		LogMessage("---- %s", "List of " ... OUTPUT_NAME ... " outputs:");
 		
-		LevelEntityOutputIterator captureOutputEvents =
-				LevelEntityOutputIterator.FromEntity(captureArea, OUTPUT_NAME);
-		
-		char targetName[32], inputName[64], variantValue[32];
-		float delay;
-		int nFireCount;
-		
-		while (captureOutputEvents.Next(targetName, sizeof(targetName), inputName,
-				sizeof(inputName), variantValue, sizeof(variantValue), delay, nFireCount)) {
+		LevelEntityKeyValuesIterator outputIter = entityKeys.GetKeyIterator(OUTPUT_NAME);
+		while (outputIter.Next()) {
+			char outputString[256];
+			outputIter.GetString(outputString, sizeof(outputString));
+			
+			char targetName[32], inputName[64], variantValue[32];
+			float delay;
+			int nFireCount;
+			
+			ParseEntityOutputString(outputString, targetName, sizeof(targetName),
+					inputName, sizeof(inputName), variantValue, sizeof(variantValue),
+					delay, nFireCount);
+			
 			LogMessage("target %s -> input %s (value %s, delay %.2f, refire %d)",
 					targetName, inputName, variantValue, delay, nFireCount);
 		}
-		delete captureOutputEvents;
+		delete outputIter;
 	}
 }
