@@ -13,11 +13,13 @@
 
 #include <more_adt>
 
+#include <profiler>
+
 #include "level_keyvalues/map_string_natives.sp"
 
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.3.0"
+#define PLUGIN_VERSION "0.3.0-perf-diagnostics"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -30,6 +32,8 @@ ArrayList g_MapEntities;
 bool g_bMutableList;
 
 Handle g_OnEntityKeysParsed, g_OnAllEntitiesParsed;
+
+char g_DiagnosticFile[PLATFORM_MAX_PATH];
 
 public APLRes AskPluginLoad2(Handle self, bool late, char[] error, int err_max) {
 	RegPluginLibrary("level-keyvalues");
@@ -67,24 +71,40 @@ public void OnPluginStart() {
 	g_OnEntityKeysParsed = CreateGlobalForward("LevelEntity_OnEntityKeysParsed", ET_Hook,
 			Param_Cell);
 	g_OnAllEntitiesParsed = CreateGlobalForward("LevelEntity_OnAllEntitiesParsed", ET_Ignore);
+	
+	BuildPath(Path_SM, g_DiagnosticFile, sizeof(g_DiagnosticFile), "logs/levelkeyvalues_stats.txt");
+	LogToFile(g_DiagnosticFile, "Plugin loaded.");
 }
 
 public Action OnLevelInit(const char[] mapName, char mapEntities[2097152]) {
+	Handle prof = CreateProfiler();
 	if (g_MapEntities) {
+		StartProfiling(prof);
 		while (g_MapEntities.Length) {
 			StringMultiMap handle = g_MapEntities.Get(0);
 			delete handle;
 			g_MapEntities.Erase(0);
 		}
 		delete g_MapEntities;
+		StopProfiling(prof);
+		LogToFile(g_DiagnosticFile, "Cleanup of level entity list for previous map took %f seconds", GetProfilerTime(prof));
 	}
 	
+	StartProfiling(prof);
 	g_MapEntities = ParseEntityList(mapEntities);
+	StopProfiling(prof);
 	
+	LogToFile(g_DiagnosticFile, "Entity parsing on %s took %f seconds", mapName, GetProfilerTime(prof));
+	
+	StartProfiling(prof);
 	g_bMutableList = true;
 	Call_StartForward(g_OnAllEntitiesParsed);
 	Call_Finish();
 	g_bMutableList = false;
+	StopProfiling(prof);
+	LogToFile(g_DiagnosticFile, "Post-entity parse forward on %s took %f seconds", mapName, GetProfilerTime(prof));
+	
+	delete prof;
 	
 	mapEntities = "";
 	WriteEntityList(g_MapEntities, mapEntities, sizeof(mapEntities));
