@@ -19,7 +19,7 @@
 
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.3.0-perf-diagnostics"
+#define PLUGIN_VERSION "0.3.0-perf-diagnostics-r02"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -94,7 +94,7 @@ public Action OnLevelInit(const char[] mapName, char mapEntities[2097152]) {
 	g_MapEntities = ParseEntityList(mapEntities);
 	StopProfiling(prof);
 	
-	LogToFile(g_DiagnosticFile, "Entity parsing on %s took %f seconds", mapName, GetProfilerTime(prof));
+	LogToFile(g_DiagnosticFile, "Entity parsing on %s took %f seconds (%d in list)", mapName, GetProfilerTime(prof), g_MapEntities.Length);
 	
 	StartProfiling(prof);
 	g_bMutableList = true;
