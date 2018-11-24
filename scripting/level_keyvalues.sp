@@ -19,7 +19,7 @@
 
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.3.0-perf-diagnostics-r02"
+#define PLUGIN_VERSION "0.3.0-perf-diagnostics-r03"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -87,14 +87,15 @@ public Action OnLevelInit(const char[] mapName, char mapEntities[2097152]) {
 		}
 		delete g_MapEntities;
 		StopProfiling(prof);
-		LogToFile(g_DiagnosticFile, "Cleanup of level entity list for previous map took %f seconds", GetProfilerTime(prof));
+		LogToFile(g_DiagnosticFile, "Post-level list cleanup took %f seconds", GetProfilerTime(prof));
 	}
 	
+	LogToFile(g_DiagnosticFile, "-------- Diagnostics for %s --------", mapName);
 	StartProfiling(prof);
 	g_MapEntities = ParseEntityList(mapEntities);
 	StopProfiling(prof);
 	
-	LogToFile(g_DiagnosticFile, "Entity parsing on %s took %f seconds (%d in list)", mapName, GetProfilerTime(prof), g_MapEntities.Length);
+	LogToFile(g_DiagnosticFile, "Entity parsing took %f seconds (%d in list)", GetProfilerTime(prof), g_MapEntities.Length);
 	
 	StartProfiling(prof);
 	g_bMutableList = true;
@@ -102,12 +103,15 @@ public Action OnLevelInit(const char[] mapName, char mapEntities[2097152]) {
 	Call_Finish();
 	g_bMutableList = false;
 	StopProfiling(prof);
-	LogToFile(g_DiagnosticFile, "Post-entity parse forward on %s took %f seconds", mapName, GetProfilerTime(prof));
+	LogToFile(g_DiagnosticFile, "Post-entity parse forward took %f seconds", GetProfilerTime(prof));
 	
-	delete prof;
-	
+	StartProfiling(prof);
 	mapEntities = "";
 	WriteEntityList(g_MapEntities, mapEntities, sizeof(mapEntities));
+	StopProfiling(prof);
+	LogToFile(g_DiagnosticFile, "Level entity string generation took %f seconds", GetProfilerTime(prof));
+	
+	delete prof;
 	
 	return Plugin_Changed;
 }
