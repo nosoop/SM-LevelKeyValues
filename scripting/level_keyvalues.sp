@@ -17,7 +17,7 @@
 
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.3.0"
+#define PLUGIN_VERSION "0.3.1"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -109,7 +109,7 @@ public int Native_GetKeysByHammerID(Handle plugin, int argc) {
 }
 
 public int Native_LevelListGet(Handle plugin, int argc) {
-	return view_as<int>(CloneHandle(g_MapEntities.Get(GetNativeCell(1))));
+	return view_as<int>(CloneHandle(g_MapEntities.Get(GetNativeCell(1)), plugin));
 }
 
 public int Native_LevelListErase(Handle plugin, int argc) {
