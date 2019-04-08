@@ -17,7 +17,7 @@
 
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.3.1"
+#define PLUGIN_VERSION "0.3.2"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -165,7 +165,7 @@ static ArrayList ParseEntityList(const char mapEntities[2097152]) {
 	
 	int i, n;
 	char lineBuffer[4096];
-	while ((n = SplitString(mapEntities[i], "\n", lineBuffer, sizeof(lineBuffer))) != -1) {
+	while ((n = SplitStringOnNewLine(mapEntities[i], lineBuffer, sizeof(lineBuffer))) != -1) {
 		switch(lineBuffer[0]) {
 			case '{': {
 				currentEntityMap = new StringMultiMap();
@@ -206,6 +206,31 @@ static ArrayList ParseEntityList(const char mapEntities[2097152]) {
 	return mapEntityList;
 }
 
+/** 
+ * Semi-optimized `SplitString` for linebreaks.
+ * 
+ */
+int SplitStringOnNewLine(const char[] str, char[] buffer, int maxlen) {
+	int b;
+	char c;
+	while ((c = str[b]) != '\0' && c != '\n') {
+		b++;
+	}
+	if (!str[b]) {
+		return -1;
+	}
+	b++;
+	strcopy(buffer, b, str);
+	return b;
+}
+
+/**
+ * Replacement for StrCat that takes in a position to copy to.
+ */
+int strcopypos(char[] dest, int destLen, const char[] source, int index = 0) {
+	return strcopy(dest[index], destLen - index, source) + index;
+}
+
 Action ForwardOnEntityKeysParsed(StringMultiMap entity) {
 	Action result;
 	Call_StartForward(g_OnEntityKeysParsed);
@@ -219,8 +244,9 @@ Action ForwardOnEntityKeysParsed(StringMultiMap entity) {
  * Writes the entity list back out in level string format.
  */
 void WriteEntityList(ArrayList entityList, char[] buffer, int maxlen) {
+	int bufpos;
 	for (int i = 0; i < entityList.Length; i++) {
-		StrCat(buffer, maxlen, "{\n");
+		bufpos = strcopypos(buffer, maxlen, "{\n", bufpos);
 		
 		StringMultiMapIterator keyiter = view_as<StringMultiMap>(entityList.Get(i)).GetIterator();
 		while (keyiter.Next()) {
@@ -230,11 +256,11 @@ void WriteEntityList(ArrayList entityList, char[] buffer, int maxlen) {
 			
 			char lineBuffer[512];
 			Format(lineBuffer, sizeof(lineBuffer), "\"%s\" \"%s\"\n", key, value);
-			StrCat(buffer, maxlen, lineBuffer);
+			bufpos = strcopypos(buffer, maxlen, lineBuffer, bufpos);
 		}
 		delete keyiter;
 		
-		StrCat(buffer, maxlen, "}\n");
+		bufpos = strcopypos(buffer, maxlen, "}\n", bufpos);
 	}
 }
 
