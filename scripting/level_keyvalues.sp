@@ -17,7 +17,7 @@
 
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.3.2"
+#define PLUGIN_VERSION "0.3.3"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -116,6 +116,9 @@ public int Native_LevelListErase(Handle plugin, int argc) {
 	if (!g_bMutableList) {
 		ThrowNativeError(1, "Can't remove entities from list during non-mutable state.");
 	}
+	StringMultiMap entity = g_MapEntities.Get(GetNativeCell(1));
+	delete entity;
+	
 	g_MapEntities.Erase(GetNativeCell(1));
 	return 0;
 }
