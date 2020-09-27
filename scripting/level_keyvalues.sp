@@ -17,7 +17,7 @@
 
 #pragma newdecls required
 
-#define PLUGIN_VERSION "0.3.3"
+#define PLUGIN_VERSION "0.3.4"
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
@@ -216,7 +216,8 @@ static ArrayList ParseEntityList(const char mapEntities[2097152]) {
 int SplitStringOnNewLine(const char[] str, char[] buffer, int maxlen) {
 	int b;
 	char c;
-	while ((c = str[b]) != '\0' && c != '\n') {
+	while ((c = str[b]) != '\0' && c != '\n'
+			&& c != '\r' /* really? what the fuck are you doing, L4D2? */) {
 		b++;
 	}
 	if (!str[b]) {
