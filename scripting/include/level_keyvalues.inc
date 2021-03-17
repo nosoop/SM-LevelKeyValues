@@ -34,8 +34,8 @@ methodmap LevelEntityKeyValuesIterator < StringMultiMapIterator {
 	public native float GetFloat(float flDefaultValue = 0.0);
 	public native void SetFloat(float flValue);
 	
-	public native void GetVector(float vec[3], const float defvalue[3])
-	public native void SetVector(const float vec[3])
+	public native void GetVector(float vec[3], const float defvalue[3]);
+	public native void SetVector(const float vec[3]);
 }
 
 /**
