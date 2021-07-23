@@ -5,13 +5,13 @@
  * handle, indexed by Hammer ID.
  */
 #pragma semicolon 1
-#pragma dynamic 1048576
 #include <sourcemod>
 
 #include <sdkhooks>
 #include <regex>
 
 #include <more_adt>
+#include <entitylump>
 
 #include "level_keyvalues/map_string_natives.sp"
 
@@ -21,7 +21,7 @@
 public Plugin myinfo = {
 	name = "Level KeyValues",
 	author = "nosoop",
-	description = "Parses the map entity string into a KeyValues structure.",
+	description = "Parses the map entity string into a KeyValues-like structure.",
 	version = PLUGIN_VERSION,
 	url = "https://github.com/nosoop/SM-LevelKeyValues/"
 }
@@ -69,7 +69,7 @@ public void OnPluginStart() {
 	g_OnAllEntitiesParsed = CreateGlobalForward("LevelEntity_OnAllEntitiesParsed", ET_Ignore);
 }
 
-public Action OnLevelInit(const char[] mapName, char mapEntities[2097152]) {
+public void OnMapEntitiesParsed() {
 	if (g_MapEntities) {
 		while (g_MapEntities.Length) {
 			StringMultiMap handle = g_MapEntities.Get(0);
@@ -79,17 +79,14 @@ public Action OnLevelInit(const char[] mapName, char mapEntities[2097152]) {
 		delete g_MapEntities;
 	}
 	
-	g_MapEntities = ParseEntityList(mapEntities);
+	g_MapEntities = ParseEntityList();
 	
 	g_bMutableList = true;
 	Call_StartForward(g_OnAllEntitiesParsed);
 	Call_Finish();
 	g_bMutableList = false;
 	
-	mapEntities = "";
-	WriteEntityList(g_MapEntities, mapEntities, sizeof(mapEntities));
-	
-	return Plugin_Changed;
+	WriteEntityList(g_MapEntities);
 }
 
 public int Native_GetKeysByHammerID(Handle plugin, int argc) {
@@ -150,89 +147,33 @@ StringMultiMap CloneStringMultiMap(StringMultiMap source) {
 }
 
 /**
- * Parses the level entity string into an ArrayList of StringMultiMap handles.
+ * Translates the EntityLump entries into an ArrayList of StringMultiMap handles.
  */
-static ArrayList ParseEntityList(const char mapEntities[2097152]) {
-	static Regex s_KeyValueLine;
-	
-	if (!s_KeyValueLine) {
-		// Pattern copied from alliedmodders/stripper-source/master/parser.cpp
-		s_KeyValueLine = new Regex("\"([^\"]+)\"\\s+\"([^\"]+)\"");
-	}
-	
+static ArrayList ParseEntityList() {
 	ArrayList mapEntityList = new ArrayList();
 	
 	char key[256], value[256];
 	
-	StringMultiMap currentEntityMap;
-	
-	int i, n;
-	char lineBuffer[4096];
-	while ((n = SplitStringOnNewLine(mapEntities[i], lineBuffer, sizeof(lineBuffer))) != -1) {
-		switch(lineBuffer[0]) {
-			case '{': {
-				currentEntityMap = new StringMultiMap();
-			}
-			case '}': {
-				if (ForwardOnEntityKeysParsed(currentEntityMap) != Plugin_Stop) {
-					mapEntityList.Push(currentEntityMap);
-					currentEntityMap = null; // don't hold a reference that might be pushed later
-				} else {
-					delete currentEntityMap;
-				}
-				
-				// next open bracket starts on same line
-				if (lineBuffer[1] == '{') {
-					currentEntityMap = new StringMultiMap();
-				}
-			}
-			default: {
-				if (s_KeyValueLine.Match(lineBuffer)) {
-					s_KeyValueLine.GetSubString(1, key, sizeof(key));
-					s_KeyValueLine.GetSubString(2, value, sizeof(value));
-					
-					currentEntityMap.AddString(key, value);
-				}
-			}
+	for (int i, n = EntityLump.Length(); i < n; i++) {
+		EntityLumpEntry entry = EntityLump.Get(i);
+		StringMultiMap mm = new StringMultiMap();
+		
+		for (int k, kn = entry.Length; k < kn; k++) {
+			entry.Get(k, key, sizeof(key), value, sizeof(value));
+			mm.AddString(key, value);
 		}
-		i += n;
-	}
-	
-	if (currentEntityMap) {
-		if (ForwardOnEntityKeysParsed(currentEntityMap) != Plugin_Stop) {
-			mapEntityList.Push(currentEntityMap);
+		
+		delete entry;
+		
+		if (ForwardOnEntityKeysParsed(mm) != Plugin_Stop) {
+			mapEntityList.Push(mm);
 		} else {
-			delete currentEntityMap;
+			delete entry;
+			// filtered entities will not propagate back to the EntityLump after it's cleared
 		}
 	}
 	
 	return mapEntityList;
-}
-
-/** 
- * Semi-optimized `SplitString` for linebreaks.
- * 
- */
-int SplitStringOnNewLine(const char[] str, char[] buffer, int maxlen) {
-	int b;
-	char c;
-	while ((c = str[b]) != '\0' && c != '\n'
-			&& c != '\r' /* really? what the fuck are you doing, L4D2? */) {
-		b++;
-	}
-	if (!str[b]) {
-		return -1;
-	}
-	b++;
-	strcopy(buffer, b, str);
-	return b;
-}
-
-/**
- * Replacement for StrCat that takes in a position to copy to.
- */
-int strcopypos(char[] dest, int destLen, const char[] source, int index = 0) {
-	return strcopy(dest[index], destLen - index, source) + index;
 }
 
 Action ForwardOnEntityKeysParsed(StringMultiMap entity) {
@@ -245,35 +186,27 @@ Action ForwardOnEntityKeysParsed(StringMultiMap entity) {
 }
 
 /**
- * Writes the entity list back out in level string format.
+ * Writes the entity list back out.
  */
-void WriteEntityList(ArrayList entityList, char[] buffer, int maxlen) {
-	int bufpos;
-	for (int i = 0; i < entityList.Length; i++) {
-		bufpos = strcopypos(buffer, maxlen, "{\n", bufpos);
+void WriteEntityList(ArrayList entityList) {
+	// oh no
+	while (EntityLump.Length()) {
+		EntityLump.Erase(0);
+	}
+	
+	for (int i, n = entityList.Length; i < n; i++) {
+		EntityLumpEntry newEntry = EntityLump.Get(EntityLump.Append());
 		
-		StringMultiMapIterator keyiter = view_as<StringMultiMap>(entityList.Get(i)).GetIterator();
+		StringMultiMap mm = entityList.Get(i);
+		StringMultiMapIterator keyiter = mm.GetIterator();
 		while (keyiter.Next()) {
-			char key[64], value[256];
+			char key[64], value[1024];
 			keyiter.GetKey(key, sizeof(key));
 			keyiter.GetString(value, sizeof(value));
 			
-			char lineBuffer[512];
-			Format(lineBuffer, sizeof(lineBuffer), "\"%s\" \"%s\"\n", key, value);
-			bufpos = strcopypos(buffer, maxlen, lineBuffer, bufpos);
+			newEntry.Append(key, value);
 		}
-		delete keyiter;
 		
-		bufpos = strcopypos(buffer, maxlen, "}\n", bufpos);
+		delete newEntry;
 	}
-}
-
-/**
- * Converts a string to lower case.
- */
-stock void StrToLower(char[] buffer) {
-	int c;
-	do {
-		buffer[c] = CharToLower(buffer[c]);
-	} while (buffer[++c]);
 }
