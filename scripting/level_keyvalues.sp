@@ -168,7 +168,7 @@ static ArrayList ParseEntityList() {
 		if (ForwardOnEntityKeysParsed(mm) != Plugin_Stop) {
 			mapEntityList.Push(mm);
 		} else {
-			delete entry;
+			delete mm;
 			// filtered entities will not propagate back to the EntityLump after it's cleared
 		}
 	}
